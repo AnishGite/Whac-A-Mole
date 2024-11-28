@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mario Whac-a-Mole Deluxe</title>
+    <style>
+        :root {
+            --mario-red: #E52521;
+            --mario-blue: #2C41FF;
+            --mario-ground: #9F4E1E;
+            --mario-yellow: #FBD000;
+            --mario-green: #35A79C;
+        }
+        * {
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, var(--mario-blue), #1a2a6c);
+            font-family: 'Pixelify Sans', sans-serif;
+            overflow: hidden;
+        }
+        #gameWrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+        #gameContainer {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            background-color: var(--mario-ground);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+        }
+        .hole {
+            width: 120px;
+            height: 120px;
+            background-color: #8B4513;
+            border-radius: 15px;
+            position: relative;
+            overflow: hidden;
+            border: 3px solid #5D3A1A;
+            transform: perspective(500px);
+        }
+        .mole {
+            position: absolute;
+            width: 90px;
+            height: 90px;
+            bottom: -90px;
+            left: 15px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            transform: scale(0.8);
+            background-size: cover;
+            background-position: center;
+        }
+        .mole.visible {
+            bottom: 15px;
+            transform: scale(1) rotate(0deg);
+            animation: pop-up 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+        .mole.hit {
+            animation: whack 0.2s linear;
+        }
+        @keyframes pop-up {
+            0% { bottom: -90px; transform: scale(0.5); }
+            70% { transform: scale(1.1); }
+            100% { bottom: 15px; transform: scale(1); }
+        }
+        @keyframes whack {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(-15deg); }
+            50% { transform: rotate(15deg); }
+            75% { transform: rotate(-10deg); }
+            100% { transform: rotate(0deg); }
+        }
+        #uiContainer {
+            display: flex;
+            width: 100%;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            gap: 20px;
+        }
+        .game-stat {
+            background-color: var(--mario-red);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            min-width: 150px;
+            text-align: center;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        #restartButton {
+            background-color: var(--mario-yellow);
+            color: black;
+            border: 3px solid var(--mario-red);
+            padding: 15px 25px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+        #restartButton:hover {
+            transform: scale(1.05);
+            background-color: var(--mario-green);
+        }
+    </style>
+</head>
+<body>
+    <div id="gameWrapper">
+        <div id="uiContainer">
+            <div id="scoreBoard" class="game-stat">Score: 0</div>
+            <div id="timeBoard" class="game-stat">Time: 30</div>
+            <div id="levelBoard" class="game-stat">Level: 1</div>
+        </div>
+        <div id="gameContainer">
+            <div class="hole"><div class="mole"></div></div>
+            <div class="hole"><div class="mole"></div></div>
+            <div class="hole"><div class="mole"></div></div>
+            <div class="hole"><div class="mole"></div></div>
+            <div class="hole"><div class="mole"></div></div>
+            <div class="hole"><div class="mole"></div></div>
+            <div class="hole"><div class="mole"></div></div>
+            <div class="hole"><div class="mole"></div></div>
+            <div class="hole"><div class="mole"></div></div>
+        </div>
+        <button id="restartButton">Restart Game</button>
+    </div>
+
+    <script>
+        const moles = document.querySelectorAll('.mole');
+        const scoreBoard = document.getElementById('scoreBoard');
+        const timeBoard = document.getElementById('timeBoard');
+        const levelBoard = document.getElementById('levelBoard');
+        const restartButton = document.getElementById('restartButton');
+        let gameInterval, timerInterval;
+
+        let score = 0, timeLeft = 30, gameActive = true, combo = 0, level = 1, gameSpeed = 1000;
+
+        function randomMole() {
+            if (!gameActive) return;
+
+            moles.forEach(mole => {
+                mole.innerHTML = '';
+                mole.style.backgroundColor = '';
+                mole.classList.remove('visible');
+            });
+
+            const randomIndex = Math.floor(Math.random() * moles.length);
+            const mole = moles[randomIndex];
+            
+            const specialChance = Math.random();
+            if (specialChance < 0.2) {
+                mole.style.backgroundColor = '#FFD700'; // Gold coin
+                mole.style.backgroundImage = 'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'45\' fill=\'%23FFD700\'/><path d=\'M50 20 L60 40 L80 43 L65 58 L69 80 L50 70 L31 80 L35 58 L20 43 L40 40 Z\' fill=\'white\'/></svg>")';
+            } else if (specialChance > 0.8) {
+                mole.style.backgroundColor = 'black'; // Bomb
+                mole.style.backgroundImage = 'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'45\' fill=\'black\'/><circle cx=\'50\' cy=\'50\' r=\'35\' fill=\'%23333\'/><line x1=\'20\' y1=\'20\' x2=\'80\' y2=\'80\' stroke=\'red\' stroke-width=\'5\'/></svg>")';
+            } else {
+                mole.style.backgroundColor = '#FF4500'; // Regular mole color
+                mole.style.backgroundImage = 'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'45\' fill=\'%23FF4500\'/><circle cx=\'40\' cy=\'40\' r=\'10\' fill=\'white\'/><circle cx=\'60\' cy=\'40\' r=\'10\' fill=\'white\'/></svg>")';
+            }
+            
+            mole.classList.add('visible');
+        }
+
+        function whackMole() {
+            if (!gameActive) return;
+
+            if (this.classList.contains('visible')) {
+                const bgColor = this.style.backgroundColor;
+                
+                this.classList.add('hit');
+                setTimeout(() => this.classList.remove('hit'), 200);
+
+                if (bgColor === 'black') {
+                    score = Math.max(0, score - 5);
+                    combo = 0;
+                } else if (bgColor === 'rgb(255, 215, 0)') {
+                    score += 3;
+                    combo++;
+                } else {
+                    score++;
+                    combo++;
+                }
+
+                if (combo > 5) {
+                    score += Math.floor(combo / 5);
+                }
+
+                if (score >= level * 10) {
+                    level++;
+                    gameSpeed = Math.max(300, gameSpeed - 100);
+                    clearInterval(gameInterval);
+                    gameInterval = setInterval(randomMole, gameSpeed);
+                }
+
+                scoreBoard.textContent = `Score: ${score}`;
+                levelBoard.textContent = `Level: ${level}`;
+                timeBoard.textContent = `Time: ${timeLeft}`;
+                
+                this.classList.remove('visible');
+            }
+        }
+
+        function startGame() {
+            score = 0;
+            timeLeft = 30;
+            combo = 0;
+            level = 1;
+            gameActive = true;
+            gameSpeed = 1000;
+
+            scoreBoard.textContent = `Score: ${score}`;
+            levelBoard.textContent = `Level: ${level}`;
+            timeBoard.textContent = `Time: ${timeLeft}`;
+
+            gameInterval = setInterval(randomMole, gameSpeed);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timeBoard.textContent = `Time: ${timeLeft}`;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(gameInterval);
+                    clearInterval(timerInterval);
+                    gameActive = false;
+                    alert(`Game Over! Final Score: ${score} | Level: ${level}`);
+                }
+            }, 1000);
+        }
+
+        moles.forEach(mole => mole.addEventListener('click', whackMole));
+        restartButton.addEventListener('click', () => {
+            clearInterval(gameInterval);
+            clearInterval(timerInterval);
+            startGame();
+        });
+
+        startGame();
+    </script>
+</body>
+</html>
